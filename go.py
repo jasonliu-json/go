@@ -39,7 +39,7 @@ class GameBoard:
 
 
 if __name__ == "__main__":
-    
+
     game_board = GameBoard(10)
     game_board.print_board()
     game_board.place_piece(1, 1, 1)
