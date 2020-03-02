@@ -45,3 +45,4 @@ if __name__ == "__main__":
     game_board.place_piece(1, 1, 1)
     game_board.place_piece(9,9,0)
     game_board.print_board()
+
