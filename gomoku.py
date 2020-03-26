@@ -1,15 +1,14 @@
 class Game:
 
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self):
+        self.width, self.height = self.set_game_size()
         self.x_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.y_list = 'abcdefghijklmnopqrstuvwxyz'
         self.turn = 'black'
         self.not_turn = 'white'
         self.white_character = '☺ '
         self.black_character = '☻ '
-        self.size = width * height
+        self.size = self.width * self.height
         self.board = []
         self.valid_moves = []
         for i in range(self.size):
@@ -19,6 +18,19 @@ class Game:
 
         self.game_over = False
         self.winner = 'idk?'
+
+    def set_game_size(self, attempt=0):
+        if attempt > 1:
+            print("default size initiated")
+            return 15, 15
+        elif attempt == 1:
+            size = input("invalid input. range is 1-26")
+        else:
+            size = input("input game size")
+        if size.isdigit() and 1 <= int(size) <= 26:
+            return int(size), int(size)
+        else:
+            return self.set_game_size(attempt+1)
 
     def get_index_from_letter(self, x, y):
         return self.x_list.find(x) + self.width * self.y_list.find(y)
@@ -130,7 +142,7 @@ class Game:
     def play(self):
         self.print_board()
 
-        while not g.game_over:
+        while not self.game_over:
             self.move(g.get_input())
             self.check_win()
             self.check_full()
@@ -139,24 +151,13 @@ class Game:
         if self.winner == 'idk?':
             print("tie game")
         else:
-            again = input(self.winner + " wins! play again? y/n")
-            if again == 'y' or again == 'Y':
-                self.play()
-            else:
-                print("goodbye")
+            print(self.winner + " wins!")
 
+        again = input("play again? y/n")
+        if again == 'y' or again == 'Y':
+            self.play()
+        else:
+            print("goodbye :(")
 
-g = Game(19,19)
-
-g.print_board()
-
-while not g.game_over:
-    g.move(g.get_input())
-    g.check_win()
-    g.check_full()
-    g.print_board()
-
-if g.winner == 'idk?':
-    print("tie game")
-else:
-    print(g.winner + " wins!")
+g = Game()
+g.play()
