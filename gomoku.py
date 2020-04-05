@@ -1,7 +1,9 @@
-class Game:
+import pygame
 
+class GameLogic:
     def __init__(self):
-        self.width, self.height = self.set_game_size()
+        # self.width, self.height = self.set_game_size()
+        self.width, self.height = 19, 19
         self.x_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self.y_list = 'abcdefghijklmnopqrstuvwxyz'
         self.turn = 'black'
@@ -85,6 +87,9 @@ class Game:
             return self.get_input(1)
         return index
 
+    def check_input(self, x,y, attempt=0):
+        return self.valid_moves[self.get_index_from_coordinates(x,y)]
+
     def move(self, index):
         if index == 'rip':
             return
@@ -139,14 +144,16 @@ class Game:
                     return
         return False
 
-    def play(self):
+    def play_in_console(self):
         self.print_board()
 
         while not self.game_over:
-            self.move(g.get_input())
+            self.move(self.get_input())
             self.check_win()
             self.check_full()
             self.print_board()
+
+
 
         if self.winner == 'idk?':
             print("tie game")
@@ -155,9 +162,63 @@ class Game:
 
         again = input("play again? y/n")
         if again == 'y' or again == 'Y':
-            self.play()
+            self.play_in_console()
         else:
             print("goodbye :(")
 
-g = Game()
-g.play()
+
+if __name__ == "__main__":
+
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    black = (0, 0, 0)
+    background_color = (250, 200, 150)
+    screen.fill(background_color)
+    square_width = 28
+    title_height = 70
+    grid_size = 19
+    piece_size = 12
+
+    def reset_screen():
+        screen.fill(background_color)
+        for i in range(grid_size):
+            pygame.draw.rect(screen, black, (
+                square_width, title_height + i * square_width,
+                square_width * (grid_size - 1), 1))
+            pygame.draw.rect(screen, black, (
+                square_width * (i + 1), title_height, 1,
+                square_width * (grid_size - 1)))
+        pygame.draw.circle(screen, black, (280,322), 2)
+        pygame.display.update()
+
+
+    reset_screen()
+    g = GameLogic()
+
+    while not g.game_over:
+        event = pygame.event.wait()
+
+        # if the 'close' button of the window is pressed
+        if event.type == pygame.QUIT:
+            # stops the application
+            break
+
+        # if any mouse button is pressed
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            yeet = event.pos
+            print(yeet)
+            if square_width - piece_size < yeet[0] < square_width * grid_size + piece_size \
+                    and title_height - piece_size < yeet[1] < 600 - piece_size:
+
+                print("yeeted")
+                x = ((yeet[0] - square_width) + square_width//2) // square_width
+                y = ((yeet[1] - title_height) + square_width//2) // square_width
+                print(g.x_list[x], g.y_list[y])
+                if g.check_input(x,y):
+                    g.move(g.get_index_from_coordinates(x,y))
+                    g.check_win()
+                    g.check_full()
+                    g.print_board()
+
+    pygame.quit()
