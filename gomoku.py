@@ -1,5 +1,3 @@
-import pygame
-
 class GameLogic:
     def __init__(self):
         # self.width, self.height = self.set_game_size()
@@ -8,18 +6,20 @@ class GameLogic:
         self.y_list = 'abcdefghijklmnopqrstuvwxyz'
         self.turn = 'black'
         self.not_turn = 'white'
+        self.can_undo = True
         self.white_character = '☺ '
         self.black_character = '☻ '
         self.size = self.width * self.height
         self.board = []
         self.valid_moves = []
+        self.previous_move = None
         for i in range(self.size):
             x, y = self.get_coordinates(i)
             self.board.append(x + y)
             self.valid_moves.append(True)
 
         self.game_over = False
-        self.winner = 'idk?'
+        self.winner = 'tie game'
 
     def set_game_size(self, attempt=0):
         if attempt > 1:
@@ -93,16 +93,26 @@ class GameLogic:
     def move(self, index):
         if index == 'rip':
             return
-        if g.turn == 'black':
+        if self.turn == 'black':
             self.board[index] = self.black_character
-            g.turn = 'white'
-            g.not_turn = 'black'
+            self.turn = 'white'
+            self.not_turn = 'black'
         else:
             self.board[index] = self.white_character
-            g.turn = 'black'
-            g.not_turn = 'white'
+            self.turn = 'black'
+            self.not_turn = 'white'
         self.valid_moves[index] = False
+        self.previous_move = index
+        self.can_undo = True
 
+    def undo(self):
+        oof = self.turn
+        self.turn = self.not_turn
+        self.not_turn = oof
+        self.valid_moves[self.previous_move] = True
+        x,y=self.get_coordinates(self.previous_move)
+        self.board[self.previous_move] = x+y
+        self.can_undo = False
 
     def check_win(self):
 
@@ -153,9 +163,7 @@ class GameLogic:
             self.check_full()
             self.print_board()
 
-
-
-        if self.winner == 'idk?':
+        if self.winner == 'tie game?':
             print("tie game")
         else:
             print(self.winner + " wins!")
@@ -166,18 +174,48 @@ class GameLogic:
         else:
             print("goodbye :(")
 
+    def reset(self):
+        self.width, self.height = 19, 19
+        self.x_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        self.y_list = 'abcdefghijklmnopqrstuvwxyz'
+        self.turn = 'black'
+        self.not_turn = 'white'
+        self.can_undo = True
+        self.white_character = '☺ '
+        self.black_character = '☻ '
+        self.size = self.width * self.height
+        self.board = []
+        self.valid_moves = []
+        self.previous_move = None
+        for i in range(self.size):
+            x, y = self.get_coordinates(i)
+            self.board.append(x + y)
+            self.valid_moves.append(True)
+
+        self.game_over = False
+        self.winner = 'tie game'
+
 
 if __name__ == "__main__":
-
+    import pygame
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
+    white = (255,255,255)
     black = (0, 0, 0)
     background_color = (250, 200, 150)
     screen.fill(background_color)
     square_width = 28
     title_height = 70
+    title_text_size = 72
     grid_size = 19
-    piece_size = 12
+    piece_radius = 12
+    turn_screen = (0, 0, square_width * grid_size, title_height - piece_radius)
+    undo_button = (800 - square_width*8, title_height*3, square_width*6, title_height)
+    reset_button = (800 - square_width*8, title_height*6, square_width*6, title_height)
+    button_color = (150, 250, 150)
+
+    def check_in_rect(pos, rect):
+        return rect[0] <= pos[0] <= rect[0] + rect[2] and rect[1] <= pos[1] <= rect[1] + rect[3]
 
     def reset_screen():
         screen.fill(background_color)
@@ -189,11 +227,37 @@ if __name__ == "__main__":
                 square_width * (i + 1), title_height, 1,
                 square_width * (grid_size - 1)))
         pygame.draw.circle(screen, black, (280,322), 2)
+        update_title("black's turn")
+        pygame.draw.rect(screen, button_color, undo_button)
+        pygame.draw.rect(screen, button_color, reset_button)
+        undo_font = pygame.font.SysFont("comicsansms", title_text_size)
+        undo_text = undo_font.render("UNDO", True, black)
+        reset_font = pygame.font.SysFont("comicsansms", title_text_size)
+        reset_text = reset_font.render("RESET", True, black)
+        screen.blit(undo_text, undo_button)
+        screen.blit(reset_text, reset_button)
+        pygame.display.update()
+
+    def draw_circle(x,y):
+        screen_location = (
+        (1 + x) * square_width, title_height + y * square_width)
+        pygame.draw.circle(screen, white, screen_location,
+                           piece_radius)
+
+    def update_title(text, color=black):
+        pygame.draw.rect(screen, background_color, turn_screen)
+        pygame.display.update()
+        font = pygame.font.SysFont("comicsansms", title_text_size)
+
+        text = font.render(text, True, color)
+        screen.blit(text, (10, 10))
         pygame.display.update()
 
 
     reset_screen()
     g = GameLogic()
+    moves = 0
+    previous_move = None
 
     while not g.game_over:
         event = pygame.event.wait()
@@ -207,18 +271,47 @@ if __name__ == "__main__":
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             yeet = event.pos
-            print(yeet)
-            if square_width - piece_size < yeet[0] < square_width * grid_size + piece_size \
-                    and title_height - piece_size < yeet[1] < 600 - piece_size:
+            x = ((yeet[0] - square_width) + square_width // 2) // square_width
+            y = ((yeet[1] - title_height) + square_width // 2) // square_width
+            screen_location = (1 + x) * square_width, title_height + y * square_width
 
-                print("yeeted")
-                x = ((yeet[0] - square_width) + square_width//2) // square_width
-                y = ((yeet[1] - title_height) + square_width//2) // square_width
-                print(g.x_list[x], g.y_list[y])
+            if square_width - piece_radius < yeet[0] < square_width * grid_size + piece_radius \
+                    and title_height - piece_radius < yeet[1] < 600 - piece_radius:
+
+
                 if g.check_input(x,y):
                     g.move(g.get_index_from_coordinates(x,y))
+                    if g.not_turn == "white":
+                        pygame.draw.circle(screen, white, screen_location, piece_radius)
+                        update_title("black's turn")
+
+                    else:
+                        pygame.draw.circle(screen, black, screen_location, piece_radius)
+                        update_title("white's turn")
+                    pygame.display.update()
+
                     g.check_win()
                     g.check_full()
                     g.print_board()
+                    moves += 1
+                    previous_move = screen_location
 
-    pygame.quit()
+            elif check_in_rect(yeet, undo_button) and g.can_undo and moves > 0:
+                g.undo()
+                if g.not_turn == "white":
+                    update_title("black's turn")
+                else:
+                    update_title("white's turn")
+                pygame.draw.circle(screen, background_color, previous_move, piece_radius)
+                x_loc, y_loc = previous_move
+                pygame.draw.rect(screen, black, (x_loc-piece_radius, y_loc, piece_radius*2, 1))
+                pygame.draw.rect(screen, black, (x_loc, y_loc-piece_radius, 1, piece_radius * 2))
+                pygame.display.update()
+            elif check_in_rect(yeet, reset_button):
+                g.reset()
+                reset_screen()
+                
+    if g.winner == "tie game":
+        update_title("tie game")
+    else:
+        update_title(g.winner + " wins!")
